@@ -5,27 +5,18 @@ from torchvision import transforms
 
 
 class CovidDataset(Dataset):
-    def __init__(self, mode, dim=(224, 224)):
+    def __init__(self, data, mode):
         self.class_dict = {'pneumonia': 0, 'normal': 1, 'COVID-19': 2, 'positive': 2}
-        self.dim = dim
+        self.data_PATH = "./data/{}/{}".format(data, mode)
+        with open(self.data_PATH + ".txt", "r") as f:
+            self.data = f.readlines()
         self.mode = mode
-        if self.mode == "train":
-            with open("./data/small/train.txt", 'r')as f:
-                self.info = f.readlines()
-        elif self.mode == "val":
-            with open("./data/small/val.txt", 'r')as f:
-                self.info = f.readlines()
-        elif self.mode == "test":
-            with open("./data/small/test.txt", 'r')as f:
-                self.info = f.readlines()
-        else:
-            raise (Exception("mode error"))
 
     def __getitem__(self, index):
-        img_name = self.info[index].split(' ')[1]
-        img_label = self.info[index].split(' ')[2]
+        img_name = self.data[index].split(' ')[1]
+        img_label = self.data[index].split(' ')[2]
+        img_path = self.data_PATH + "/" + img_name
         if self.mode == "train":
-            img_path = "./data/small/train/" + img_name
             transform = transforms.Compose([
                 transforms.Resize([224, 224]),
                 transforms.RandomHorizontalFlip(),
@@ -34,14 +25,12 @@ class CovidDataset(Dataset):
                 transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
         elif self.mode == "val":
-            img_path = "./data/small/val/" + img_name
             transform = transforms.Compose([
                 transforms.Resize([224, 224]),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
         elif self.mode == "test":
-            img_path = "./data/small/test/" + img_name
             transform = transforms.Compose([
                 transforms.Resize([224, 224]),
                 transforms.ToTensor(),
@@ -52,14 +41,26 @@ class CovidDataset(Dataset):
             raise (Exception("mode error"))
 
         img = Image.open(img_path).convert("RGB")
-
         img_tensor = transform(img)
         label_tensor = torch.tensor(self.class_dict[img_label])
         return img_tensor, label_tensor
 
     def __len__(self):
-        return len(self.info)
+        return len(self.data)
 
 
-if __name__ == "__main__":
-    Train_Dataset = CovidDataset("train")
+def Creat_DataSet(data, mode, batch, shuffle):
+    COVID_DataLoader = DataLoader(dataset=CovidDataset(data, mode), batch_size=batch, shuffle=shuffle, num_workers=4,
+                                  pin_memory=True)
+    return COVID_DataLoader
+
+
+def Creat_OneData(data_path):
+    transform = transforms.Compose([
+        transforms.Resize([224, 224]),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+    img = Image.open(data_path).convert("RGB")
+    img_tensor = transform(img)
+    return img_tensor
